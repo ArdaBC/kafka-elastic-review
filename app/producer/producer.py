@@ -1,14 +1,29 @@
-from kafka import KafkaProducer
+from confluent_kafka import Producer
 from utils import generate_review
 import time, json
 
-producer = KafkaProducer(
-    bootstrap_servers='localhost:9092',
-    value_serializer=lambda v: json.dumps(v).encode('utf-8')
-)
+
+conf = {
+    'bootstrap.servers': 'localhost:9092'
+}
+producer = Producer(conf)
+
+
+def delivery_report(err, msg):
+    if err is not None:
+        print(f"Delivery failed for message: {err}")
+    else:
+        print(f"Message delivered to {msg.topic()} [{msg.partition()}]")
+
 
 while True:
     review = generate_review(50)
-    producer.send('review-topic', review)
+    producer.produce(
+        topic='review-topic',
+        value=json.dumps(review),
+        callback=delivery_report
+    )
+    
+    producer.flush()
     print(f"Sent: {review}")
-    time.sleep(10)
+    time.sleep(3)

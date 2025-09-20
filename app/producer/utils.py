@@ -73,14 +73,6 @@ templates = [
     "Mixed feelings: the {feature} is {adj}, but it also {verb} me."
 ]
 
-products = [
-    "Laptop", "Phone", "Headphones", "Tablet", "Monitor",
-    "Smartwatch", "Keyboard", "Mouse", "Speaker", "Camera",
-    "Printer", "Router", "External Hard Drive", "Webcam", "Microphone",
-    "Fitness Tracker", "E-Reader", "Gaming Console", "Smart TV", "Drone",
-    "VR Headset", "Portable Charger", "Bluetooth Earbuds", "Projector", "Smart Home Hub"
-]
-
 def random_timestamp(start_days_ago=120):
     now = datetime.now()
     start = now - timedelta(days=start_days_ago)
@@ -112,9 +104,8 @@ def generate_review(odds=50):
     review_text = template.format(user=user, purpose=purpose, verb=verb, feature=feature, adj=adj, months=months, recommend=recommend, reason=reason)
 
     return {
-        "user_id": random.randint(100000,999999),
-        "product_id": random.randint(1, 999),
-        "product_name": random.choice(products),
+        "user_id": random.randint(1,200),
+        "product_id": random.randint(1, 100),
         "rating": rating,
         "review_text": review_text,
         "timestamp": random_timestamp().isoformat()

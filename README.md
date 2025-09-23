@@ -1,5 +1,4 @@
-SQL: https://planetscale.com/
-
+Seeder for Mock User and Product
 
 elasticsearch kibana --> docker üzerinden
 

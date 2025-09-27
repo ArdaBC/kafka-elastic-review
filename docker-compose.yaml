@@ -25,3 +25,18 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     depends_on:
       - zookeeper
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node   # single node mode
+      - xpack.security.enabled=false # disable auth for dev
+    ports:
+      - "9200:9200"   # REST API (queries & indexing)
+      - "9300:9300"   # transport protocol (internal)
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+
+volumes:
+  es_data:

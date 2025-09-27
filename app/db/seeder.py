@@ -24,16 +24,10 @@ surnames = [
     "Mitchell", "Carter"
 ]
 
-def _hash_password(plain_password: str, salt: bytes = None, iterations: int = 100_000):
-    if salt is None:
-        salt = os.urandom(16)
+def _hash_password(plain_password: str, iterations: int = 10):
+    salt = os.urandom(16)
     dk = hashlib.pbkdf2_hmac("sha256", plain_password.encode("utf-8"), salt, iterations)
-    return {
-        "salt": binascii.hexlify(salt).decode("ascii"),
-        "hash": binascii.hexlify(dk).decode("ascii"),
-        "iterations": iterations,
-        "algo": "pbkdf2_hmac_sha256"
-    }
+    return binascii.hexlify(dk).decode("ascii")
 
 
 def seed_users(db, count=200):
@@ -45,7 +39,7 @@ def seed_users(db, count=200):
             "name": f"{first} {last}",
             "email": f"user{user_id}@example.com",
             "phone": f"555 000 {user_id:04d}",
-            "password": _hash_password(f"password{user_id}"),
+            "password": _hash_password(f"password{user_id}"),  
             "total_reviews": 0,
             "average_rating": 0.0,
         }

@@ -1,7 +1,7 @@
 import os
 import runpy
-from db import utils
-from services.db import get_db
+from app.db import utils
+from app.services.db import get_db
 from dotenv import load_dotenv
 
 load_dotenv()

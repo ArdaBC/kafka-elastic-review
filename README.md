@@ -4,6 +4,12 @@ elasticsearch kibana --> docker üzerinden
 
 
 
+ÖNEMLİ:
+
+python -m db.init_db
+python -m db.seeder
+
+
 
 kurulum:
 

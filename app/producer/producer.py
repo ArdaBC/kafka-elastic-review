@@ -27,7 +27,8 @@ except Exception as e:
     print(e)
 
 #TO_DO: Get from .env for future
-db = client["Kafka-Elastic-Review"]
+MONGO_DB = os.getenv("MONGODB_DB")
+db = client[MONGO_DB]
 collection = db["Reviews"]
 
 

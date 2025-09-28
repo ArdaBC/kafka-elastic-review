@@ -1,13 +1,7 @@
-Seeder for Mock User and Product
-
-elasticsearch kibana --> docker üzerinden
-
-
-
 ÖNEMLİ:
 
-python -m db.init_db
-python -m db.seeder
+python -m app.db.init_db
+python -m app.db.seeder
 
 
 

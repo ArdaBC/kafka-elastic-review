@@ -3,33 +3,15 @@ from confluent_kafka import Producer
 from utils import generate_review
 import time, json
 from dotenv import load_dotenv
-from pymongo.mongo_client import MongoClient
-from pymongo.server_api import ServerApi
-
 
 
 load_dotenv()
+KAFKA_TOPIC_REVIEW = os.getenv("KAFKA_TOPIC_REVIEW")
 
 conf = {
     'bootstrap.servers': 'localhost:9092'
 }
 producer = Producer(conf)
-
-
-#MONGODB CONNECTION
-uri = os.getenv("MONGO_URI")
-client = MongoClient(uri, server_api=ServerApi('1'))
-
-try:
-    client.admin.command('ping')
-    print("Pinged your deployment. You successfully connected to MongoDB!")
-except Exception as e:
-    print(e)
-
-#TO_DO: Get from .env for future
-MONGO_DB = os.getenv("MONGODB_DB")
-db = client[MONGO_DB]
-collection = db["Reviews"]
 
 
 def delivery_report(err, msg):
@@ -42,7 +24,7 @@ def delivery_report(err, msg):
 while True:
     review = generate_review(50)
     producer.produce(
-        topic='review-topic',
+        topic=KAFKA_TOPIC_REVIEW,
         value=json.dumps(review),
         callback=delivery_report
     )
@@ -50,14 +32,4 @@ while True:
     producer.flush()
     #print(f"Sent: {review}")
     
-    try:
-        collection.insert_one(review)
-        print("Inserted into MongoDB:", review)
-    except Exception as e:
-        print("MongoDB insert error:", e)
-        
-    
     time.sleep(3)
-    
-    
-

@@ -40,8 +40,8 @@ def seed_users(db, count=200):
             "email": f"user{user_id}@example.com",
             "phone": f"555 000 {user_id:04d}",
             "password": _hash_password(f"password{user_id}"),  
+            "total_ratings": 0.0,
             "total_reviews": 0,
-            "average_rating": 0.0,
         }
         db["users"].update_one({"user_id": user_id}, {"$set": user_doc}, upsert=True)
     print(f"{count} users seeded/upserted.")
@@ -52,8 +52,7 @@ def seed_products(db, count=100):
         product_doc = {
             "product_id": product_id,
             "name": f"Product Name {product_id}",
-            "total_ratings": 0,
-            "average_rating": 0.0,
+            "total_ratings": 0.0,
             "total_reviews": 0,
         }
         db["products"].update_one({"product_id": product_id}, {"$set": product_doc}, upsert=True)

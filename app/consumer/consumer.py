@@ -8,6 +8,8 @@ load_dotenv()
 MONGO_URI = os.getenv("MONGO_URI")
 MONGO_DB = os.getenv("MONGO_DB")
 
+KAFKA_TOPIC_REVIEW = os.getenv("KAFKA_TOPIC_REVIEW")
+
 
 conf = {
     'bootstrap.servers': 'localhost:9092',
@@ -15,7 +17,7 @@ conf = {
     'auto.offset.reset': 'earliest'
 }
 consumer = Consumer(conf)
-consumer.subscribe(['review-topic'])
+consumer.subscribe([KAFKA_TOPIC_REVIEW])
 
 
 client = MongoClient(MONGO_URI)
@@ -38,40 +40,44 @@ while True:
     msg = consumer.poll(1.0)
     if msg is None:
         continue
-    if msg.error():
-        print(f"Consumer error: {msg.error()}")
-        continue
+    else:
+        if msg.error():
+            print(f"Consumer error: {msg.error()}")
+            continue
+        try:
+            review = json.loads(msg.value().decode("utf-8"))
 
-    try:
-        review = json.loads(msg.value().decode("utf-8"))
+            reviews.insert_one(review)
+            
+            
 
-        reviews.insert_one(review)
-
-        users.update_one(
-            {
-                "user_id": review["user_id"]
-            },
-            {
-                "$inc":{
-                    "total_ratings": review["rating"], 
-                    "total_reviews": 1
+            users.update_one(
+                {
+                    "user_id": review["user_id"]
                 },
-            }
-        )
+                {
+                    "$inc":{
+                        "total_ratings": review["rating"], 
+                        "total_reviews": 1
+                    },
+                }
+            )
 
-        products.update_one(
-            {
-                "product_id": review["product_id"]
-            },
-            {
-                "$inc":{
-                    "total_ratings": review["rating"], 
-                    "total_reviews": 1
+            products.update_one(
+                {
+                    "product_id": review["product_id"]
                 },
-            }
-        )
+                {
+                    "$inc":{
+                        "total_ratings": review["rating"], 
+                        "total_reviews": 1
+                    },
+                }
+            )
+            
+            print(f"Recieved: {review}")
 
-        #es.index(index="reviews", document=review)
+            #es.index(index="reviews", document=review)
 
-    except Exception as e:
-        print(f"Error processing message: {e}")
+        except Exception as e:
+            print(f"Error processing message: {e}")

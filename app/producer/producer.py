@@ -30,6 +30,5 @@ while True:
     )
     
     producer.flush()
-    #print(f"Sent: {review}")
     
-    time.sleep(3)
+    time.sleep(1)

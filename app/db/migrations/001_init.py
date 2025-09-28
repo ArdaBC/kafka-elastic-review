@@ -25,7 +25,6 @@ def run(db):
     db["products"].create_index("product_id", unique=True, background=True)
 
     # Reviews indexes
-    db["reviews"].create_index("review_id", unique=True, background=True)
     db["reviews"].create_index("user_id", background=True)
     db["reviews"].create_index("product_id", background=True)
     db["reviews"].create_index("timestamp", background=True)

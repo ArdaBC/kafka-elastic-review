@@ -1,112 +1,113 @@
+import signal, json, os
 from confluent_kafka import Consumer, KafkaException
 from pymongo import MongoClient
-from elasticsearch import Elasticsearch
 from dotenv import load_dotenv
-import json, sys, os, signal
 
 load_dotenv()
 MONGO_URI = os.getenv("MONGO_URI")
 MONGO_DB = os.getenv("MONGO_DB")
-
 KAFKA_TOPIC_REVIEW = os.getenv("KAFKA_TOPIC_REVIEW")
 
-client = MongoClient(MONGO_URI)
-db = client[MONGO_DB]
-reviews = db["reviews"]
-users = db["users"]
-products = db["products"]
-
-#MONGODB CONNECTION
-try:
-    client.admin.command('ping')
-    print("Connected to MongoDB")
-except Exception as e:
-    print(e)
+running = True
 
 def create_consumer():
     return Consumer({
         "bootstrap.servers": "localhost:9092",
         "group.id": "review-consumer",
-        "auto.offset.reset": "earliest",  
-        "enable.auto.commit": False,    
+        "auto.offset.reset": "earliest",
+        "enable.auto.commit": False,
         "max.poll.interval.ms": 300000,
-        "fetch.max.bytes": 5 * 1024 * 1024  #5MB per poll
+        "fetch.max.bytes": 5 * 1024 * 1024
     })
 
 
-def shutdown(consumer, sig, frame):
-    if consumer is not None:
-        consumer.commit(asynchronous=False)
-        consumer.close()
-    sys.exit(0)
+def handle_shutdown(sig, frame):
+    global running
+    print("Shutdown signal received")
+    running = False 
 
-# --- Elasticsearch ---
-#es = Elasticsearch("http://localhost:9200")
 
 def main():
+    global running
+
+    client = MongoClient(MONGO_URI)
+    db = client[MONGO_DB]
+    reviews = db["reviews"]
+    users = db["users"]
+    products = db["products"]
+
+    #Check MongoDB connection
+    try:
+        client.admin.command("ping")
+        print("Connected to MongoDB")
+    except Exception as e:
+        print(e)
 
     consumer = create_consumer()
     consumer.subscribe([KAFKA_TOPIC_REVIEW])
 
-    #Shutdown signals
-    signal.signal(signal.SIGINT, lambda sig, frame: shutdown(consumer, sig, frame))
-    signal.signal(signal.SIGTERM, lambda sig, frame: shutdown(consumer, sig, frame))
+    #Register signals
+    signal.signal(signal.SIGINT, handle_shutdown)
+    signal.signal(signal.SIGTERM, handle_shutdown)
 
     processed = 0
 
     try:
-        while True:
+        while running:
             msg = consumer.poll(timeout=1.0)
             if msg is None:
                 continue
             if msg.error():
                 print(f"Consumer error: {msg.error()}")
                 raise KafkaException(msg.error())
-            else:
-                try:
+            try:
+                review = json.loads(msg.value().decode("utf-8"))
 
-                    review = json.loads(msg.value().decode("utf-8"))
+                reviews.insert_one(review)
 
-                    reviews.insert_one(review)
-
-                    users.update_one(
-                        {
-                            "user_id": review["user_id"]
+                users.update_one(
+                    {
+                        "user_id": review["user_id"]
+                    },
+                    {
+                        "$inc":{
+                            "total_ratings": review["rating"], 
+                            "total_reviews": 1
                         },
-                        {
-                            "$inc":{
-                                "total_ratings": review["rating"], 
-                                "total_reviews": 1
-                            },
-                        }
-                    )
+                    }
+                )
 
-                    products.update_one(
-                        {
-                            "product_id": review["product_id"]
+                products.update_one(
+                    {
+                        "product_id": review["product_id"]
+                    },
+                    {
+                        "$inc":{
+                            "total_ratings": review["rating"], 
+                            "total_reviews": 1
                         },
-                        {
-                            "$inc":{
-                                "total_ratings": review["rating"], 
-                                "total_reviews": 1
-                            },
-                        }
-                    )
+                    }
+                )
 
-                    #es.index(index="reviews", document=review)
+                #es.index(index="reviews", document=review)
 
-                    processed += 1
+                processed += 1
 
-                    print(f"Recieved: {review}")
-                    
-                    if processed % 50 == 0:  # commit every 50
-                        consumer.commit(asynchronous=False)
+                print(f"Recieved: {review}")
 
-                except Exception as e:
-                    print(f"Error processing message: {e}")
-                    consumer.commit(msg)
+                if processed % 10 == 0:
+                    consumer.commit(asynchronous=False)
+
+            except Exception as e:
+                print(f"Error processing message: {e}")
+                consumer.commit(message=msg)  #skip the bad record
+
     finally:
-        shutdown(None, None)
+        print("Closing consumer")
+        consumer.commit(asynchronous=False)
+        consumer.close()
+        print("Consumer closed cleanly")
 
-if __name__ == "__main__": 
+
+if __name__ == "__main__":
     main()

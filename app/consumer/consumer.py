@@ -4,7 +4,7 @@ from elasticsearch import Elasticsearch
 from pymongo import MongoClient
 from dotenv import load_dotenv
 from elasticsearch import helpers
-
+from utils import create_indices
 
 
 load_dotenv()
@@ -31,25 +31,6 @@ def create_consumer():
         "fetch.max.bytes": 5 * 1024 * 1024
     })
     
-def create_index_if_not_exists(es, index_name="reviews"):
-    mapping = {
-        "mappings": {
-            "properties": {
-                "user_id":    { "type": "integer" },
-                "product_id": { "type": "integer" },
-                "rating":     { "type": "float" },
-                "review_text":{ "type": "text" },
-                "timestamp":  { "type": "date" }
-            }
-        }
-    }
-    if not es.indices.exists(index=index_name):
-        es.indices.create(index=index_name, body=mapping)
-        print(f"Created index '{index_name}' with mapping")
-    else:
-        print(f"Index '{index_name}' already exists")
-
-
 
 def handle_shutdown(sig, frame):
     global running
@@ -72,24 +53,21 @@ def main():
         print("Connected to MongoDB")
     except Exception as e:
         print(e)
-        
-        
-        
+
+
     print(f"Connecting to Elasticsearch at {ELASTIC_URI} ...")
     es = Elasticsearch(
         ELASTIC_URI,
         basic_auth=(ELASTIC_USER, ELASTIC_PASSWORD),
-        verify_certs=False,  # optional if you are not using HTTPS
+        verify_certs=False,
         request_timeout=30
     )
-    
-    
-    #print(es.info())
-        
+
+
     try:
         if es.ping():
             print("Connected to Elasticsearch")
-            create_index_if_not_exists(es, "reviews")
+            create_indices(es)
         else:
             print("Elasticsearch is not responding")
     except Exception as e:
@@ -115,18 +93,20 @@ def main():
             try:
                 review = json.loads(msg.value().decode("utf-8"))
 
-                reviews.insert_one(review)
+                #Insert into Mongo
+                result = reviews.insert_one(review)
 
                 users.update_one(
                     {
                         "user_id": review["user_id"]
                     },
                     {
-                        "$inc":{
+                        "$inc": {
                             "total_ratings": review["rating"], 
                             "total_reviews": 1
-                        },
-                    }
+                        }
+                    },
+                    upsert=True
                 )
 
                 products.update_one(
@@ -134,18 +114,59 @@ def main():
                         "product_id": review["product_id"]
                     },
                     {
-                        "$inc":{
+                        "$inc": {
                             "total_ratings": review["rating"], 
                             "total_reviews": 1
-                        },
-                    }
+                        }
+                    },
+                    upsert=True
                 )
 
-                #Index into Elasticsearch
-                doc_id = str(review["_id"])
+                #Compute avg_rating, upsert into Elasticsearch for Kibana
+                try:
+                    prod = products.find_one({"product_id": review["product_id"]})
+                    if prod:
+                        total_ratings = float(prod.get("total_ratings", 0.0))
+                        total_reviews = int(prod.get("total_reviews", 0))
+                        avg_rating = total_ratings / total_reviews if total_reviews > 0 else 0.0
+
+                        product_doc = {
+                            "product_id": prod.get("product_id"),
+                            "name": prod.get("name"),
+                            "total_ratings": total_ratings,
+                            "total_reviews": total_reviews,
+                            "avg_rating": avg_rating
+                        }
+
+                        es.index(index="products", id=str(product_doc["product_id"]), body=product_doc)
+
+                    usr = users.find_one({"user_id": review["user_id"]})
+                    if usr:
+                        total_ratings = float(usr.get("total_ratings", 0.0))
+                        total_reviews = int(usr.get("total_reviews", 0))
+                        avg_rating = total_ratings / total_reviews if total_reviews > 0 else 0.0
+
+                        #Exclude password from indexing
+                        user_doc = {
+                            "user_id": usr.get("user_id"),
+                            "name": usr.get("name"),
+                            "email": usr.get("email"),
+                            "phone": usr.get("phone"),
+                            "total_ratings": total_ratings,
+                            "total_reviews": total_reviews,
+                            "avg_rating": avg_rating
+                        }
+
+                        es.index(index="users", id=str(user_doc["user_id"]), body=user_doc)
+
+                except Exception as e:
+                    print(f"Warning: failed to update product/user summary in ES: {e}")
+
+                inserted_id = result.inserted_id
+                doc_id = str(inserted_id)
                 doc = {k: v for k, v in review.items() if k != "_id"}
 
-                # Ensure timestamp is string
+                #Make timestamp is string
                 if isinstance(doc.get("timestamp"), datetime.datetime):
                     doc["timestamp"] = doc["timestamp"].isoformat()
 
@@ -155,32 +176,35 @@ def main():
                     "_source": doc
                 })
 
-
                 processed += 1
 
                 print(f"Recieved: {review}")
 
                 if processed % KAFKA_BULK_SIZE == 0:
                     consumer.commit(asynchronous=False)
-                    
-                
-                # Send bulk to Elasticsearch when bulk size reached
+
                 if len(bulk_actions) >= ELASTIC_BULK_SIZE:
-                    helpers.bulk(es, bulk_actions)
+                    try:
+                        helpers.bulk(es, bulk_actions)
+                    except Exception as e:
+                        print(f"Error performing ES bulk for reviews: {e}")
                     bulk_actions.clear()
 
             except Exception as e:
                 print(f"Error processing message: {e}")
                 consumer.commit(message=msg)  #Skip the bad record
-  
-            
+
+
     finally:
         print("Closing consumer")
-        
+
         if bulk_actions:
-            helpers.bulk(es, bulk_actions)
+            try:
+                helpers.bulk(es, bulk_actions)
+            except Exception as e:
+                print(f"Error performing final ES bulk: {e}")
             bulk_actions.clear()
-        
+
         consumer.commit(asynchronous=False)
         consumer.close()
         print("Consumer closed cleanly")

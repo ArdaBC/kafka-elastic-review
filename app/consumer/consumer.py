@@ -58,7 +58,7 @@ def main():
     print(f"Connecting to Elasticsearch at {ELASTIC_URI} ...")
     es = Elasticsearch(
         ELASTIC_URI,
-        basic_auth=(ELASTIC_USER, ELASTIC_PASSWORD),
+        #basic_auth=(ELASTIC_USER, ELASTIC_PASSWORD),
         verify_certs=False,
         request_timeout=30
     )

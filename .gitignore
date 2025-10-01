@@ -22,4 +22,5 @@ venv/
 .env
 
 *.log
+consumer.log*
 *.ndjson

@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from elasticsearch import helpers
 from utils import create_indices
 from datetime import timezone
+from logging.handlers import TimedRotatingFileHandler
 
 
 load_dotenv()
@@ -26,7 +27,7 @@ LOG_LEVEL = os.getenv("LOG_LEVEL", "DEBUG").upper()
 # ---------- JSON logger to stdout ----------
 class JsonFormatter(logging.Formatter):
     def format(self, record):
-        ts = datetime.datetime.now(timezone.utc).replace(tzinfo=datetime.timezone.utc).isoformat()
+        ts = datetime.datetime.now(timezone.utc).replace(tzinfo=timezone.utc).isoformat()
         base = {
             "timestamp": ts,
             "level": record.levelname,
@@ -44,12 +45,33 @@ class JsonFormatter(logging.Formatter):
             base.update(extra)
         return json.dumps(base, default=str, ensure_ascii=False)
 
-handler = logging.StreamHandler(stream=sys.stdout)
-handler.setFormatter(JsonFormatter())
+# --- log directory relative to this file ---
+current_dir = os.path.dirname(os.path.abspath(__file__))  # consumer.py folder
+log_dir = os.path.join(current_dir, "../logs")            # ../logs
+os.makedirs(log_dir, exist_ok=True)
+log_file = os.path.join(log_dir, "consumer.log")
+
+# --- StreamHandler (stdout) ---
+stream_handler = logging.StreamHandler(sys.stdout)
+stream_handler.setFormatter(JsonFormatter())
+
+# --- FileHandler (writes to consumer.log) ---
+file_handler = TimedRotatingFileHandler(
+    log_file,
+    when="midnight",   # rotate at midnight
+    interval=1,
+    backupCount=7      # keep 7 days
+)
+file_handler.setFormatter(JsonFormatter())
+
+# --- Logger setup ---
 logger = logging.getLogger("review-consumer")
-logger.setLevel(LOG_LEVEL)
-logger.addHandler(handler)
+logger.setLevel(logging.DEBUG)
+logger.addHandler(stream_handler)
+logger.addHandler(file_handler)
 logger.propagate = False
+
+logger.info("Logger initialized", extra={"extra": {"log_file": log_file}})
 # -------------------------------------------
 
 

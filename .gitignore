@@ -20,3 +20,6 @@ venv/
 *.swp
 
 .env
+
+*.log
+*.ndjson

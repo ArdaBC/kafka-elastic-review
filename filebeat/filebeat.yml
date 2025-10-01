@@ -1,0 +1,10 @@
+﻿filebeat.inputs:
+- type: log
+  enabled: true
+  paths:
+    - /usr/share/filebeat/logs/*.log  # container sees this path
+  json.keys_under_root: true
+  json.add_error_key: true
+
+output.logstash:
+  hosts: ["logstash:5044"]

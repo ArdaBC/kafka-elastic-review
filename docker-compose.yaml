@@ -49,5 +49,29 @@ services:
     depends_on:
       - elasticsearch
 
+
+  # Optional: logstash if you want host logs or Kafka -> ES via LS
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.15.0
+    container_name: logstash
+    volumes:
+      - ./logstash/pipeline:/usr/share/logstash/pipeline
+    ports:
+      - "5044:5044"
+    depends_on:
+      - elasticsearch
+      - kafka
+
+  # Optional: Filebeat if you want centralized logs
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.15.0
+    container_name: filebeat
+    user: root
+    volumes:
+      - ./filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:rw
+      - ./app/logs:/usr/share/filebeat/logs:rw   # <-- mount host logs folder
+    depends_on:
+      - logstash
+
 volumes:
   es_data:

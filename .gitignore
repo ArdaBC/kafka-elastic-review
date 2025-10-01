@@ -14,9 +14,10 @@ __pycache__/
 env/
 venv/
 
-
 .vscode/
 .idea/
 *.swp
 
 .env
+
+*.log

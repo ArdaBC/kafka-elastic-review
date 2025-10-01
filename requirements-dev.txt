@@ -1,0 +1,7 @@
+pytest
+testcontainers
+confluent-kafka
+pymongo
+elasticsearch>=8.0.0,<9.0.0
+pytest-timeout
+python-dotenv

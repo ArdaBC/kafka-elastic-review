@@ -80,15 +80,16 @@ bulk_actions = []
 running = True
 
 def create_consumer():
+    # Allow overriding kafka bootstrap servers via env for tests and CI.
+    bootstrap = os.getenv("KAFKA_BOOTSTRAP", "localhost:9092")
     return Consumer({
-        "bootstrap.servers": "localhost:9092",
+        "bootstrap.servers": bootstrap,
         "group.id": "review-consumer",
         "auto.offset.reset": "earliest",
         "enable.auto.commit": False,
         "max.poll.interval.ms": 300000,
         "fetch.max.bytes": 5 * 1024 * 1024
     })
-    
 
 def handle_shutdown(sig, frame):
     global running

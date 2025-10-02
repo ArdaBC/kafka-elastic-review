@@ -13,9 +13,14 @@ from dotenv import load_dotenv
 from testcontainers.kafka import KafkaContainer
 from testcontainers.elasticsearch import ElasticSearchContainer
 
+load_dotenv()
+
 pytestmark = pytest.mark.integration
 
 MONGO_URI = os.getenv("MONGO_URI")
+if not MONGO_URI:
+    raise RuntimeError("MONGO_URI İS not set in .env")
+
 MONGO_WAIT_TIMEOUT = int(os.getenv("MONGO_WAIT_TIMEOUT"))
 ES_WAIT_TIMEOUT = int(os.getenv("ES_WAIT_TIMEOUT"))
 KAFKA_FLUSH_TIMEOUT = int(os.getenv("KAFKA_FLUSH_TIMEOUT"))
@@ -67,9 +72,6 @@ def _start_consumer_process(env: dict):
 
 
 def test_kafka_to_mongo_and_elastic():
-
-    if not MONGO_URI:
-        pytest.skip("MONGO_URI İS not set in .env")
 
     test_db = f"test_reviews_db_{int(time.time())}"
 

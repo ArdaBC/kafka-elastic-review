@@ -121,4 +121,3 @@ services:
 volumes:
   es_data:
   postgres_db:
-  postgres_db:

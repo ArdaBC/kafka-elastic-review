@@ -1,5 +1,6 @@
 from typing import Set
 
+
 def _get_migrations_collection(db):
     return db["migrations"]
 

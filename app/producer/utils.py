@@ -2,48 +2,152 @@ import random
 from datetime import datetime, timedelta
 
 users = [
-    "I", "We", "My partner", "My spouse", "My girlfriend", "My boyfriend",
-    "A friend", "A close friend", "My best friend", "My roommate",
-    "My colleague", "My boss", "My coworker", "My teammate",
-    "My mom", "My dad", "My brother", "My sister", "My son", "My daughter",
-    "My kids", "My family", "My neighbor", "My cousin", "My uncle", "My aunt",
-    "My grandparents", "My grandpa", "My grandma"
+    "I",
+    "We",
+    "My partner",
+    "My spouse",
+    "My girlfriend",
+    "My boyfriend",
+    "A friend",
+    "A close friend",
+    "My best friend",
+    "My roommate",
+    "My colleague",
+    "My boss",
+    "My coworker",
+    "My teammate",
+    "My mom",
+    "My dad",
+    "My brother",
+    "My sister",
+    "My son",
+    "My daughter",
+    "My kids",
+    "My family",
+    "My neighbor",
+    "My cousin",
+    "My uncle",
+    "My aunt",
+    "My grandparents",
+    "My grandpa",
+    "My grandma",
 ]
 
 adjectives_pos = [
-    "excellent", "fantastic", "outstanding", "solid", "reliable", "amazing", "impressive",
-    "durable", "comfortable", "sleek", "modern", "remarkable", "incredible", "smooth",
-    "top-notch", "affordable", "user-friendly", "well-designed", "consistent", "versatile"
+    "excellent",
+    "fantastic",
+    "outstanding",
+    "solid",
+    "reliable",
+    "amazing",
+    "impressive",
+    "durable",
+    "comfortable",
+    "sleek",
+    "modern",
+    "remarkable",
+    "incredible",
+    "smooth",
+    "top-notch",
+    "affordable",
+    "user-friendly",
+    "well-designed",
+    "consistent",
+    "versatile",
 ]
 
 adjectives_neg = [
-    "terrible", "disappointing", "cheap", "unreliable", "buggy", "frustrating",
-    "awkward", "clunky", "uncomfortable", "outdated", "horrible", "mediocre",
-    "inconsistent", "slow", "laggy", "poorly designed", "overpriced", "fragile",
-    "noisy", "unresponsive"
+    "terrible",
+    "disappointing",
+    "cheap",
+    "unreliable",
+    "buggy",
+    "frustrating",
+    "awkward",
+    "clunky",
+    "uncomfortable",
+    "outdated",
+    "horrible",
+    "mediocre",
+    "inconsistent",
+    "slow",
+    "laggy",
+    "poorly designed",
+    "overpriced",
+    "fragile",
+    "noisy",
+    "unresponsive",
 ]
 
 features = [
-    "battery life", "screen", "sound quality", "customer service", "build quality",
-    "design", "performance", "comfort", "durability", "price", "ease of use",
-    "packaging", "delivery speed", "size", "weight", "controls", "instructions",
-    "software", "connection stability", "overall value"
+    "battery life",
+    "screen",
+    "sound quality",
+    "customer service",
+    "build quality",
+    "design",
+    "performance",
+    "comfort",
+    "durability",
+    "price",
+    "ease of use",
+    "packaging",
+    "delivery speed",
+    "size",
+    "weight",
+    "controls",
+    "instructions",
+    "software",
+    "connection stability",
+    "overall value",
 ]
 
 verbs_pos = [
-    "exceeded", "met", "surprised", "outperformed", "delivered on",
-    "matched", "impressed", "amazed", "improved", "satisfied",
-    "delighted", "shocked", "thrilled", "wow-ed", "blew us away",
-    "lived up to expectations", "worked flawlessly", "made a difference",
-    "went above and beyond", "proved reliable", "felt premium", "enhanced"
+    "exceeded",
+    "met",
+    "surprised",
+    "outperformed",
+    "delivered on",
+    "matched",
+    "impressed",
+    "amazed",
+    "improved",
+    "satisfied",
+    "delighted",
+    "shocked",
+    "thrilled",
+    "wow-ed",
+    "blew us away",
+    "lived up to expectations",
+    "worked flawlessly",
+    "made a difference",
+    "went above and beyond",
+    "proved reliable",
+    "felt premium",
+    "enhanced",
 ]
 
 verbs_neg = [
-    "fell short of", "disappointed", "let down", "annoyed",
-    "failed to deliver", "ruined", "underwhelmed", "frustrated",
-    "struggled", "underperformed", "broke", "lagged", "caused trouble",
-    "felt cheap", "was problematic", "didn't meet expectations", "was unstable",
-    "underwhelmed me", "made things worse", "was confusing"
+    "fell short of",
+    "disappointed",
+    "let down",
+    "annoyed",
+    "failed to deliver",
+    "ruined",
+    "underwhelmed",
+    "frustrated",
+    "struggled",
+    "underperformed",
+    "broke",
+    "lagged",
+    "caused trouble",
+    "felt cheap",
+    "was problematic",
+    "didn't meet expectations",
+    "was unstable",
+    "underwhelmed me",
+    "made things worse",
+    "was confusing",
 ]
 
 templates = [
@@ -70,8 +174,9 @@ templates = [
     "Overall: {adj}. Would {recommend}.",
     "The {feature} is {adj}, though other parts {verb} expectations.",
     "Some aspects are {adj}, but others {verb}. Still, {recommend}.",
-    "Mixed feelings: the {feature} is {adj}, but it also {verb} me."
+    "Mixed feelings: the {feature} is {adj}, but it also {verb} me.",
 ]
+
 
 def random_timestamp(start_days_ago=120):
     now = datetime.now()
@@ -80,33 +185,49 @@ def random_timestamp(start_days_ago=120):
     random_seconds = random.randint(0, int(delta.total_seconds()))
     return start + timedelta(seconds=random_seconds)
 
-#odds are % of pos review
+
+# odds are % of pos review
 def generate_review(odds=50):
 
     sentiment = random.choices(
-        population=["positive", "negative"],
-        weights=[odds, 100 - odds],
-        k=1
+        population=["positive", "negative"], weights=[odds, 100 - odds], k=1
     )[0]
 
-    rating = random.randint(7, 10) / 2 if sentiment == "positive" else random.randint(2, 7) / 2
+    rating = (
+        random.randint(7, 10) / 2
+        if sentiment == "positive"
+        else random.randint(2, 7) / 2
+    )
 
-    adj = random.choice(adjectives_pos if sentiment=="positive" else adjectives_neg)
-    verb = random.choice(verbs_pos if sentiment=="positive" else verbs_neg)
+    adj = random.choice(adjectives_pos if sentiment == "positive" else adjectives_neg)
+    verb = random.choice(verbs_pos if sentiment == "positive" else verbs_neg)
     feature = random.choice(features)
     user = random.choice(users)
     months = random.choice(["two", "three", "six", "twelve"])
     purpose = random.choice(["daily use", "travel", "work", "gifts"])
-    recommend = "recommend it" if sentiment=="positive" else "not recommend it"
-    reason = "It performs well and is worth the money." if sentiment=="positive" else "It keeps crashing and support was unhelpful."
+    recommend = "recommend it" if sentiment == "positive" else "not recommend it"
+    reason = (
+        "It performs well and is worth the money."
+        if sentiment == "positive"
+        else "It keeps crashing and support was unhelpful."
+    )
 
     template = random.choice(templates)
-    review_text = template.format(user=user, purpose=purpose, verb=verb, feature=feature, adj=adj, months=months, recommend=recommend, reason=reason)
+    review_text = template.format(
+        user=user,
+        purpose=purpose,
+        verb=verb,
+        feature=feature,
+        adj=adj,
+        months=months,
+        recommend=recommend,
+        reason=reason,
+    )
 
     return {
-        "user_id": random.randint(1,200),
+        "user_id": random.randint(1, 200),
         "product_id": random.randint(1, 100),
         "rating": rating,
         "review_text": review_text,
-        "timestamp": random_timestamp().isoformat()
+        "timestamp": random_timestamp().isoformat(),
     }

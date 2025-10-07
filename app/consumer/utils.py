@@ -4,15 +4,13 @@ def create_indices(es):
             "settings": {
                 "number_of_shards": 1,
                 "number_of_replicas": 0,
-                "analysis": {
-                    "analyzer": {"english_analyzer": {"type": "english"}}
-                }
+                "analysis": {"analyzer": {"english_analyzer": {"type": "english"}}},
             },
             "mappings": {
                 "properties": {
-                    "user_id":    {"type": "integer"},
+                    "user_id": {"type": "integer"},
                     "product_id": {"type": "integer"},
-                    "rating":     {"type": "float"},
+                    "rating": {"type": "float"},
                     "review_text": {
                         "type": "text",
                         "analyzer": "english_analyzer",
@@ -29,14 +27,14 @@ def create_indices(es):
             "settings": {"number_of_shards": 1, "number_of_replicas": 0},
             "mappings": {
                 "properties": {
-                    "product_id":    {"type": "integer"},
+                    "product_id": {"type": "integer"},
                     "name": {
                         "type": "text",
                         "fields": {"keyword": {"type": "keyword", "ignore_above": 256}},
                     },
                     "total_ratings": {"type": "float"},
                     "total_reviews": {"type": "integer"},
-                    "avg_rating":    {"type": "float"},
+                    "avg_rating": {"type": "float"},
                 }
             },
         },
@@ -49,12 +47,16 @@ def create_indices(es):
                         "type": "text",
                         "fields": {"keyword": {"type": "keyword", "ignore_above": 256}},
                     },
-                    "email":         {"type": "keyword"},
-                    "phone":         {"type": "keyword"},
-                    "password":      {"type": "keyword", "index": False, "doc_values": False},
+                    "email": {"type": "keyword"},
+                    "phone": {"type": "keyword"},
+                    "password": {
+                        "type": "keyword",
+                        "index": False,
+                        "doc_values": False,
+                    },
                     "total_ratings": {"type": "float"},
                     "total_reviews": {"type": "integer"},
-                    "avg_rating":    {"type": "float"},
+                    "avg_rating": {"type": "float"},
                 }
             },
         },

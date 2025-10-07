@@ -1,10 +1,11 @@
 """
 Migration 001 - initial collections and indexes.
 
-Creates the three collections (users, products, reviews) 
+Creates the three collections (users, products, reviews)
 
 It must define a function "run(db)" that the migration runner will call.
 """
+
 
 def run(db):
 

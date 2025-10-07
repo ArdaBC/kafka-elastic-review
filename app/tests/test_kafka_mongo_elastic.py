@@ -35,8 +35,11 @@ def produce_reviews(bootstrap: str, topic: str, reviews: list):
 
 
 def wait_for_mongo_doc_count(
-    mongo_uri: str, db_name: str, coll_name: str,
-    expected_count: int, timeout: int = MONGO_WAIT_TIMEOUT
+    mongo_uri: str,
+    db_name: str,
+    coll_name: str,
+    expected_count: int,
+    timeout: int = MONGO_WAIT_TIMEOUT,
 ):
     client = MongoClient(mongo_uri, serverSelectionTimeoutMS=2000)
     deadline = time.time() + timeout
@@ -49,10 +52,17 @@ def wait_for_mongo_doc_count(
         except Exception:
             pass
         time.sleep(0.5)
-    raise TimeoutError(f"Timed out waiting for {db_name}.{coll_name} >= {expected_count}")
+    raise TimeoutError(
+        f"Timed out waiting for {db_name}.{coll_name} >= {expected_count}"
+    )
 
 
-def wait_for_es_count(es_client: Elasticsearch, index: str, expected_count: int, timeout: int = ES_WAIT_TIMEOUT):
+def wait_for_es_count(
+    es_client: Elasticsearch,
+    index: str,
+    expected_count: int,
+    timeout: int = ES_WAIT_TIMEOUT,
+):
     deadline = time.time() + timeout
     while time.time() < deadline:
         try:
@@ -63,7 +73,9 @@ def wait_for_es_count(es_client: Elasticsearch, index: str, expected_count: int,
         except Exception:
             pass
         time.sleep(0.5)
-    raise TimeoutError(f"Timed out waiting for ES index '{index}' to reach {expected_count} docs")
+    raise TimeoutError(
+        f"Timed out waiting for ES index '{index}' to reach {expected_count} docs"
+    )
 
 
 def test_kafka_to_elasticsearch_integration():

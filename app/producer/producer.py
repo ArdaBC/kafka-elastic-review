@@ -9,13 +9,15 @@ KAFKA_TOPIC_REVIEW = os.getenv("KAFKA_TOPIC_REVIEW")
 
 
 def create_producer():
-    return Producer({
-        "bootstrap.servers": "localhost:9092",
-        "linger.ms": 50,
-        "batch.num.messages": 10000,
-        "compression.type": "snappy",
-        "acks": "all",
-    })
+    return Producer(
+        {
+            "bootstrap.servers": "localhost:9092",
+            "linger.ms": 50,
+            "batch.num.messages": 10000,
+            "compression.type": "snappy",
+            "acks": "all",
+        }
+    )
 
 
 def delivery_report(err, msg):
@@ -33,21 +35,21 @@ def shutdown(producer, sig, frame):
 def main():
     producer = create_producer()
 
-    #Shutdown signals
+    # Shutdown signals
     signal.signal(signal.SIGINT, lambda sig, frame: shutdown(producer, sig, frame))
     signal.signal(signal.SIGTERM, lambda sig, frame: shutdown(producer, sig, frame))
 
     while True:
-        #Mock data
+        # Mock data
         review = generate_review(50)
 
         producer.produce(
             topic=KAFKA_TOPIC_REVIEW,
             key=str(review["user_id"]),
             value=json.dumps(review),
-            callback=delivery_report
+            callback=delivery_report,
         )
-        
+
         producer.poll(0)
         time.sleep(1)
 

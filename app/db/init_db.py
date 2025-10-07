@@ -13,14 +13,14 @@ if SKIP_MIGRATIONS:
     exit(0)
 
 MIGRATIONS_DIR = os.getenv(
-    "MIGRATIONS_DIR",
-    os.path.join(os.path.dirname(__file__), "migrations")
+    "MIGRATIONS_DIR", os.path.join(os.path.dirname(__file__), "migrations")
 )
 
 
 def _sorted_migration_paths():
     files = [
-        f for f in os.listdir(MIGRATIONS_DIR)
+        f
+        for f in os.listdir(MIGRATIONS_DIR)
         if f.endswith(".py") and not f.startswith("__")
     ]
     files.sort()
@@ -40,12 +40,15 @@ def run_migrations():
         print(f"Applying migration: {name}")
         module_globals = runpy.run_path(path)
         if "run" not in module_globals:
-            raise RuntimeError(f"Migration file {name} does not define a run(db) function.")
+            raise RuntimeError(
+                f"Migration file {name} does not define a run(db) function."
+            )
         module_globals["run"](db)
         utils.record_migration(db, name)
         print(f"Recorded migration: {name}")
 
     print("All migrations processed.")
+
 
 if __name__ == "__main__":
     run_migrations()

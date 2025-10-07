@@ -4,15 +4,17 @@ import os
 import datetime
 import logging
 import sys
+
 from confluent_kafka import Consumer
 from confluent_kafka import KafkaException
 from elasticsearch import Elasticsearch
+from elasticsearch import helpers
 from pymongo import MongoClient
 from dotenv import load_dotenv
-from elasticsearch import helpers
 from utils import create_indices
 from datetime import timezone
 from logging.handlers import TimedRotatingFileHandler
+
 
 load_dotenv()
 MONGO_URI = os.getenv("MONGO_URI")
@@ -26,14 +28,11 @@ ELASTIC_BULK_SIZE = int(os.getenv("ELASTIC_BULK_SIZE", 10))
 KAFKA_BULK_SIZE = int(os.getenv("KAFKA_BULK_SIZE", 10))
 
 LOG_LEVEL = os.getenv("LOG_LEVEL", "DEBUG").upper()
-# -------------------------------------------
 
-# ---------- JSON logger to stdout ----------
+
 class JsonFormatter(logging.Formatter):
     def format(self, record):
-        ts = (
-            datetime.datetime.now(timezone.utc).replace(tzinfo=timezone.utc).isoformat()
-        )
+        ts = datetime.datetime.now(timezone.utc).replace(tzinfo=timezone.utc).isoformat()
         base = {
             "timestamp": ts,
             "level": record.levelname,
@@ -52,26 +51,22 @@ class JsonFormatter(logging.Formatter):
         return json.dumps(base, default=str, ensure_ascii=False)
 
 
-# --- log directory relative to this file ---
 current_dir = os.path.dirname(os.path.abspath(__file__))  # consumer.py folder
-log_dir = os.path.join(current_dir, "../logs")  # ../logs
+log_dir = os.path.join(current_dir, "../logs")
 os.makedirs(log_dir, exist_ok=True)
 log_file = os.path.join(log_dir, "consumer.log")
 
-# --- StreamHandler (stdout) ---
 stream_handler = logging.StreamHandler(sys.stdout)
 stream_handler.setFormatter(JsonFormatter())
 
-# --- FileHandler (writes to consumer.log) ---
 file_handler = TimedRotatingFileHandler(
     log_file,
-    when="midnight",  # rotate at midnight
+    when="midnight",
     interval=1,
-    backupCount=7,  # keep 7 days
+    backupCount=7,
 )
 file_handler.setFormatter(JsonFormatter())
 
-# --- Logger setup ---
 logger = logging.getLogger("review-consumer")
 logger.setLevel(logging.DEBUG)
 logger.addHandler(stream_handler)
@@ -79,15 +74,12 @@ logger.addHandler(file_handler)
 logger.propagate = False
 
 logger.info("Logger initialized", extra={"extra": {"log_file": log_file}})
-# -------------------------------------------
 
 bulk_actions = []
-
 running = True
 
 
 def create_consumer():
-    # Allow overriding kafka bootstrap servers via env for tests and CI.
     bootstrap = os.getenv("KAFKA_BOOTSTRAP", "localhost:9092")
     return Consumer(
         {
@@ -102,8 +94,8 @@ def create_consumer():
 
 
 def handle_shutdown(sig, frame):
-    logger.info("shutdown_signal_received", extra={"extra": {"signal": sig}})
     global running
+    logger.info("shutdown_signal_received", extra={"extra": {"signal": sig}})
     running = False
 
 
@@ -114,7 +106,6 @@ def main():
     users = db["users"]
     products = db["products"]
 
-    # Check MongoDB connection
     try:
         client.admin.command("ping")
         logger.info("mongodb_connected")
@@ -126,17 +117,13 @@ def main():
     try:
         es = Elasticsearch(ELASTIC_URI, verify_certs=False, request_timeout=30)
         if es.ping():
-            logger.info(
-                "elasticsearch_connected", extra={"extra": {"uri": ELASTIC_URI}}
-            )
+            logger.info("elasticsearch_connected", extra={"extra": {"uri": ELASTIC_URI}})
             try:
                 create_indices(es)
             except Exception:
                 logger.exception("create_indices_failed")
         else:
-            logger.warning(
-                "elasticsearch_not_responding", extra={"extra": {"uri": ELASTIC_URI}}
-            )
+            logger.warning("elasticsearch_not_responding", extra={"extra": {"uri": ELASTIC_URI}})
             es = None
     except Exception:
         logger.exception("elasticsearch_connection_error")
@@ -145,7 +132,6 @@ def main():
     consumer = create_consumer()
     consumer.subscribe([KAFKA_TOPIC_REVIEW])
 
-    # Register signals
     signal.signal(signal.SIGINT, handle_shutdown)
     signal.signal(signal.SIGTERM, handle_shutdown)
 
@@ -157,19 +143,13 @@ def main():
             if msg is None:
                 continue
             if msg.error():
-                logger.error(
-                    "kafka_consumer_error", extra={"extra": {"error": str(msg.error())}}
-                )
+                logger.error("kafka_consumer_error", extra={"extra": {"error": str(msg.error())}})
                 raise KafkaException(msg.error())
             try:
                 review = json.loads(msg.value().decode("utf-8"))
 
-                # Insert into Mongo
                 result = reviews.insert_one(review)
-                logger.debug(
-                    "inserted_review_mongo",
-                    extra={"extra": {"mongo_id": str(result.inserted_id)}},
-                )
+                logger.debug("inserted_review_mongo", extra={"extra": {"mongo_id": str(result.inserted_id)}})
 
                 users.update_one(
                     {"user_id": review["user_id"]},
@@ -183,18 +163,13 @@ def main():
                     upsert=True,
                 )
 
-                # Compute avg_rating, upsert into Elasticsearch for Kibana
                 if es:
                     try:
                         prod = products.find_one({"product_id": review["product_id"]})
                         if prod:
                             total_ratings = float(prod.get("total_ratings", 0.0))
                             total_reviews = int(prod.get("total_reviews", 0))
-                            avg_rating = (
-                                total_ratings / total_reviews
-                                if total_reviews > 0
-                                else 0.0
-                            )
+                            avg_rating = total_ratings / total_reviews if total_reviews > 0 else 0.0
 
                             product_doc = {
                                 "product_id": prod.get("product_id"),
@@ -204,23 +179,14 @@ def main():
                                 "avg_rating": avg_rating,
                             }
 
-                            es.index(
-                                index="products",
-                                id=str(product_doc["product_id"]),
-                                document=product_doc,
-                            )
+                            es.index(index="products", id=str(product_doc["product_id"]), document=product_doc)
 
                         usr = users.find_one({"user_id": review["user_id"]})
                         if usr:
                             total_ratings = float(usr.get("total_ratings", 0.0))
                             total_reviews = int(usr.get("total_reviews", 0))
-                            avg_rating = (
-                                total_ratings / total_reviews
-                                if total_reviews > 0
-                                else 0.0
-                            )
+                            avg_rating = total_ratings / total_reviews if total_reviews > 0 else 0.0
 
-                            # Exclude password from indexing
                             user_doc = {
                                 "user_id": usr.get("user_id"),
                                 "name": usr.get("name"),
@@ -231,11 +197,7 @@ def main():
                                 "avg_rating": avg_rating,
                             }
 
-                            es.index(
-                                index="users",
-                                id=str(user_doc["user_id"]),
-                                document=user_doc,
-                            )
+                            es.index(index="users", id=str(user_doc["user_id"]), document=user_doc)
 
                     except Exception:
                         logger.exception("failed_update_user_product_summary_es")
@@ -244,16 +206,13 @@ def main():
                 doc_id = str(inserted_id)
                 doc = {k: v for k, v in review.items() if k != "_id"}
 
-                # Make timestamp is string
                 if isinstance(doc.get("timestamp"), datetime.datetime):
                     doc["timestamp"] = doc["timestamp"].isoformat()
 
                 if es:
                     bulk_actions.append({"_index": "reviews", "_id": doc_id, "_source": doc})
                 else:
-                    logger.debug(
-                        "skipped_review_indexing", extra={"extra": {"doc_id": doc_id}}
-                    )
+                    logger.debug("skipped_review_indexing", extra={"extra": {"doc_id": doc_id}})
 
                 processed += 1
 
@@ -270,20 +229,12 @@ def main():
 
                 if processed % KAFKA_BULK_SIZE == 0:
                     consumer.commit(asynchronous=False)
-                    logger.debug(
-                        "consumer_committed",
-                        extra={
-                            "extra": {"processed_since_last_commit": KAFKA_BULK_SIZE}
-                        },
-                    )
+                    logger.debug("consumer_committed", extra={"extra": {"processed_since_last_commit": KAFKA_BULK_SIZE}})
 
                 if len(bulk_actions) >= ELASTIC_BULK_SIZE and es:
                     try:
                         helpers.bulk(es, bulk_actions)
-                        logger.info(
-                            "bulk_index_success",
-                            extra={"extra": {"count": len(bulk_actions)}},
-                        )
+                        logger.info("bulk_index_success", extra={"extra": {"count": len(bulk_actions)}})
                     except Exception:
                         logger.exception("bulk_index_error")
                     bulk_actions.clear()
@@ -291,7 +242,7 @@ def main():
             except Exception:
                 logger.exception("error_processing_message")
                 try:
-                    consumer.commit(message=msg)  # Skip bad record
+                    consumer.commit(message=msg)
                 except Exception:
                     logger.exception("failed_commit_on_bad_record")
 
@@ -304,14 +255,17 @@ def main():
             except Exception:
                 logger.exception("error_performing_final_bulk")
             bulk_actions.clear()
+
         try:
             consumer.commit(asynchronous=False)
         except Exception:
             logger.exception("consumer_commit_failed_on_shutdown")
+
         try:
             consumer.close()
         except Exception:
             logger.exception("consumer_close_failed")
+
         logger.info("consumer_closed_cleanly")
 
 

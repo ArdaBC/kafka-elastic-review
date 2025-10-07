@@ -32,7 +32,9 @@ LOG_LEVEL = os.getenv("LOG_LEVEL", "DEBUG").upper()
 
 class JsonFormatter(logging.Formatter):
     def format(self, record):
-        ts = datetime.datetime.now(timezone.utc).replace(tzinfo=timezone.utc).isoformat()
+        ts = (
+            datetime.datetime.now(timezone.utc).replace(tzinfo=timezone.utc).isoformat()
+        )
         base = {
             "timestamp": ts,
             "level": record.levelname,
@@ -117,13 +119,17 @@ def main():
     try:
         es = Elasticsearch(ELASTIC_URI, verify_certs=False, request_timeout=30)
         if es.ping():
-            logger.info("elasticsearch_connected", extra={"extra": {"uri": ELASTIC_URI}})
+            logger.info(
+                "elasticsearch_connected", extra={"extra": {"uri": ELASTIC_URI}}
+            )
             try:
                 create_indices(es)
             except Exception:
                 logger.exception("create_indices_failed")
         else:
-            logger.warning("elasticsearch_not_responding", extra={"extra": {"uri": ELASTIC_URI}})
+            logger.warning(
+                "elasticsearch_not_responding", extra={"extra": {"uri": ELASTIC_URI}}
+            )
             es = None
     except Exception:
         logger.exception("elasticsearch_connection_error")
@@ -143,13 +149,18 @@ def main():
             if msg is None:
                 continue
             if msg.error():
-                logger.error("kafka_consumer_error", extra={"extra": {"error": str(msg.error())}})
+                logger.error(
+                    "kafka_consumer_error", extra={"extra": {"error": str(msg.error())}}
+                )
                 raise KafkaException(msg.error())
             try:
                 review = json.loads(msg.value().decode("utf-8"))
 
                 result = reviews.insert_one(review)
-                logger.debug("inserted_review_mongo", extra={"extra": {"mongo_id": str(result.inserted_id)}})
+                logger.debug(
+                    "inserted_review_mongo",
+                    extra={"extra": {"mongo_id": str(result.inserted_id)}},
+                )
 
                 users.update_one(
                     {"user_id": review["user_id"]},
@@ -169,7 +180,11 @@ def main():
                         if prod:
                             total_ratings = float(prod.get("total_ratings", 0.0))
                             total_reviews = int(prod.get("total_reviews", 0))
-                            avg_rating = total_ratings / total_reviews if total_reviews > 0 else 0.0
+                            avg_rating = (
+                                total_ratings / total_reviews
+                                if total_reviews > 0
+                                else 0.0
+                            )
 
                             product_doc = {
                                 "product_id": prod.get("product_id"),
@@ -179,13 +194,21 @@ def main():
                                 "avg_rating": avg_rating,
                             }
 
-                            es.index(index="products", id=str(product_doc["product_id"]), document=product_doc)
+                            es.index(
+                                index="products",
+                                id=str(product_doc["product_id"]),
+                                document=product_doc,
+                            )
 
                         usr = users.find_one({"user_id": review["user_id"]})
                         if usr:
                             total_ratings = float(usr.get("total_ratings", 0.0))
                             total_reviews = int(usr.get("total_reviews", 0))
-                            avg_rating = total_ratings / total_reviews if total_reviews > 0 else 0.0
+                            avg_rating = (
+                                total_ratings / total_reviews
+                                if total_reviews > 0
+                                else 0.0
+                            )
 
                             user_doc = {
                                 "user_id": usr.get("user_id"),
@@ -197,7 +220,11 @@ def main():
                                 "avg_rating": avg_rating,
                             }
 
-                            es.index(index="users", id=str(user_doc["user_id"]), document=user_doc)
+                            es.index(
+                                index="users",
+                                id=str(user_doc["user_id"]),
+                                document=user_doc,
+                            )
 
                     except Exception:
                         logger.exception("failed_update_user_product_summary_es")
@@ -210,9 +237,13 @@ def main():
                     doc["timestamp"] = doc["timestamp"].isoformat()
 
                 if es:
-                    bulk_actions.append({"_index": "reviews", "_id": doc_id, "_source": doc})
+                    bulk_actions.append(
+                        {"_index": "reviews", "_id": doc_id, "_source": doc}
+                    )
                 else:
-                    logger.debug("skipped_review_indexing", extra={"extra": {"doc_id": doc_id}})
+                    logger.debug(
+                        "skipped_review_indexing", extra={"extra": {"doc_id": doc_id}}
+                    )
 
                 processed += 1
 
@@ -229,12 +260,20 @@ def main():
 
                 if processed % KAFKA_BULK_SIZE == 0:
                     consumer.commit(asynchronous=False)
-                    logger.debug("consumer_committed", extra={"extra": {"processed_since_last_commit": KAFKA_BULK_SIZE}})
+                    logger.debug(
+                        "consumer_committed",
+                        extra={
+                            "extra": {"processed_since_last_commit": KAFKA_BULK_SIZE}
+                        },
+                    )
 
                 if len(bulk_actions) >= ELASTIC_BULK_SIZE and es:
                     try:
                         helpers.bulk(es, bulk_actions)
-                        logger.info("bulk_index_success", extra={"extra": {"count": len(bulk_actions)}})
+                        logger.info(
+                            "bulk_index_success",
+                            extra={"extra": {"count": len(bulk_actions)}},
+                        )
                     except Exception:
                         logger.exception("bulk_index_error")
                     bulk_actions.clear()

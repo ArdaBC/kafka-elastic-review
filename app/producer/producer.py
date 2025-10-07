@@ -1,6 +1,10 @@
 from confluent_kafka import Producer
 from utils import generate_review
-import time, json, sys, os, signal
+import time
+import json
+import sys
+import os
+import signal
 from dotenv import load_dotenv
 
 

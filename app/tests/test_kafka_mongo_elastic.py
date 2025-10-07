@@ -91,7 +91,7 @@ def test_kafka_to_elasticsearch_integration():
 
         es_cont.start()
         try:
-            kafka_bootstrap = kafka_cont.get_bootstrap_server()
+            _ = kafka_cont.get_bootstrap_server()
             es_url = es_cont.get_url()
 
             es = Elasticsearch(es_url, verify_certs=False)

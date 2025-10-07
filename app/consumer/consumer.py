@@ -1,5 +1,11 @@
-import signal, json, os, datetime, logging, sys
-from confluent_kafka import Consumer, KafkaException
+import signal
+import json
+import os
+import datetime
+import logging
+import sys
+from confluent_kafka import Consumer
+from confluent_kafka import KafkaException
 from elasticsearch import Elasticsearch
 from pymongo import MongoClient
 from dotenv import load_dotenv
@@ -7,7 +13,6 @@ from elasticsearch import helpers
 from utils import create_indices
 from datetime import timezone
 from logging.handlers import TimedRotatingFileHandler
-
 
 load_dotenv()
 MONGO_URI = os.getenv("MONGO_URI")
@@ -20,10 +25,8 @@ ELASTIC_PASSWORD = os.getenv("ELASTIC_PASSWORD")
 ELASTIC_BULK_SIZE = int(os.getenv("ELASTIC_BULK_SIZE", 10))
 KAFKA_BULK_SIZE = int(os.getenv("KAFKA_BULK_SIZE", 10))
 
-
 LOG_LEVEL = os.getenv("LOG_LEVEL", "DEBUG").upper()
 # -------------------------------------------
-
 
 # ---------- JSON logger to stdout ----------
 class JsonFormatter(logging.Formatter):
@@ -78,7 +81,6 @@ logger.propagate = False
 logger.info("Logger initialized", extra={"extra": {"log_file": log_file}})
 # -------------------------------------------
 
-
 bulk_actions = []
 
 running = True
@@ -100,14 +102,12 @@ def create_consumer():
 
 
 def handle_shutdown(sig, frame):
-    global running
     logger.info("shutdown_signal_received", extra={"extra": {"signal": sig}})
+    global running
     running = False
 
 
 def main():
-    global running, bulk_actions
-
     client = MongoClient(MONGO_URI)
     db = client[MONGO_DB]
     reviews = db["reviews"]
@@ -118,7 +118,7 @@ def main():
     try:
         client.admin.command("ping")
         logger.info("mongodb_connected")
-    except Exception as e:
+    except Exception:
         logger.exception("mongodb_connection_failed")
         raise
 
@@ -237,7 +237,7 @@ def main():
                                 document=user_doc,
                             )
 
-                    except Exception as e:
+                    except Exception:
                         logger.exception("failed_update_user_product_summary_es")
 
                 inserted_id = result.inserted_id
@@ -249,9 +249,7 @@ def main():
                     doc["timestamp"] = doc["timestamp"].isoformat()
 
                 if es:
-                    bulk_actions.append(
-                        {"_index": "reviews", "_id": doc_id, "_source": doc}
-                    )
+                    bulk_actions.append({"_index": "reviews", "_id": doc_id, "_source": doc})
                 else:
                     logger.debug(
                         "skipped_review_indexing", extra={"extra": {"doc_id": doc_id}}
@@ -290,7 +288,7 @@ def main():
                         logger.exception("bulk_index_error")
                     bulk_actions.clear()
 
-            except Exception as e:
+            except Exception:
                 logger.exception("error_processing_message")
                 try:
                     consumer.commit(message=msg)  # Skip bad record

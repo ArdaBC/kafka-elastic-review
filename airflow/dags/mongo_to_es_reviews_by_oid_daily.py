@@ -5,16 +5,14 @@ from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from dotenv import load_dotenv
-from pymongo import MongoClient
-from elasticsearch import Elasticsearch, helpers
-from bson import ObjectId
+
 
 # Load environment variables
 load_dotenv()
 
 # MongoDB configuration
 MONGO_URI = os.getenv("MONGO_URI")
-MONGO_DB = os.getenv("MONGO_DB").strip('"')  # remove accidental quotes
+MONGO_DB = os.getenv("MONGO_DB")  # remove accidental quotes
 MONGO_COLLECTION = "reviews"
 
 # Elasticsearch configuration
@@ -27,6 +25,9 @@ STATE_FILE = "/opt/airflow/dags/mongo_to_es_last_id.txt"
 
 
 def get_last_synced_id():
+    from pymongo import MongoClient
+    from elasticsearch import Elasticsearch, helpers
+    from bson import ObjectId
     """Retrieve the last synced ObjectId from state file."""
     if not os.path.exists(STATE_FILE):
         return None
@@ -42,6 +43,9 @@ def set_last_synced_id(last_id):
 
 
 def sync_mongo_to_es():
+    from pymongo import MongoClient
+    from elasticsearch import Elasticsearch, helpers
+    from bson import ObjectId
     logging.info("Starting MongoDB → Elasticsearch sync")
 
     # Initialize clients

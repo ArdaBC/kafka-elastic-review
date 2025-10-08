@@ -20,6 +20,8 @@ venv/
 
 .env
 
+
+airflow/logs/
 *.log
 consumer.log*
 *.ndjson

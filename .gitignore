@@ -20,4 +20,6 @@ venv/
 
 .env
 
+
+airflow/logs/
 *.log

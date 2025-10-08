@@ -27,6 +27,8 @@ from airflow import DAG
 from airflow.utils import timezone
 from airflow.operators.python import PythonOperator
 
+import pendulum
+
 LOG = logging.getLogger(__name__)
 LOG.setLevel(logging.INFO)
 
@@ -55,7 +57,7 @@ def _time_window_from_context(context: dict, dag_tz: str = "UTC") -> tuple[datet
     Fallback: use logical_date's day midnight -> next midnight in DAG timezone.
     Returns timezone-aware datetimes.
     """
-    tz = timezone.get_timezone(dag_tz)
+    tz = pendulum.timezone(dag_tz)
 
     if context.get("data_interval_start"):
         start = context["data_interval_start"]
@@ -93,11 +95,11 @@ def _iter_id_chunks_for_window(mongo_coll, start_obj: ObjectId, end_obj: ObjectI
     yielding lists of hex ids in chunks of size `chunk_size`.
     """
     cursor = mongo_coll.find(
-        {"_id": {"$gte": start_obj, "$lt": end_obj}},
-        projection={"_id": 1},
-        no_cursor_timeout=True,
-        batch_size=MONGO_CURSOR_BATCH,
+    {"_id": {"$gte": start_obj, "$lt": end_obj}},
+    projection={"_id": 1},
+    batch_size=MONGO_CURSOR_BATCH,
     )
+
     try:
         chunk: List[str] = []
         for doc in cursor:

@@ -2,3 +2,4 @@ confluent-kafka
 elasticsearch
 pymongo
 python-dotenv
+pendulum

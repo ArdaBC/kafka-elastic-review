@@ -78,6 +78,8 @@ services:
     environment:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+    env_file:
+      - .env
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/logs:/opt/airflow/logs
@@ -110,6 +112,8 @@ services:
       context: .
       dockerfile: Dockerfile-airflow
     container_name: airflow_scheduler
+    env_file:
+      - .env
     depends_on:
       - airflow-init
       - postgres

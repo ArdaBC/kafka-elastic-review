@@ -64,7 +64,9 @@ services:
       retries: 5
 
   airflow-init:
-    image: apache/airflow:2.10.2
+    build:
+      context: .
+      dockerfile: Dockerfile-airflow
     container_name: airflow_init
     depends_on:
       - postgres
@@ -82,10 +84,10 @@ services:
       - ./airflow/plugins:/opt/airflow/plugins
     restart: "no"
 
-
-
   airflow-webserver:
-    image: apache/airflow:2.10.2
+    build:
+      context: .
+      dockerfile: Dockerfile-airflow
     container_name: airflow_webserver
     depends_on:
       - airflow-init
@@ -94,6 +96,8 @@ services:
     environment:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+    env_file:
+      - .env
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/logs:/opt/airflow/logs
@@ -102,7 +106,9 @@ services:
       - "8080:8080"
 
   airflow-scheduler:
-    image: apache/airflow:2.10.2
+    build:
+      context: .
+      dockerfile: Dockerfile-airflow
     container_name: airflow_scheduler
     depends_on:
       - airflow-init

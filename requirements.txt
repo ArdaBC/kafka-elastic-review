@@ -1,1 +1,6 @@
+confluent-kafka
+elasticsearch
+pymongo
+python-dotenv
+pendulum
 pytest-dotenv
